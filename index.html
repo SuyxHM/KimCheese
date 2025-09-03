@@ -1,0 +1,240 @@
+
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <title>Chúc Mừng Sinh Nhật</title>
+  <style>
+    html, body {
+      margin: 0;
+      padding: 0;
+      width: 100%;
+      height: 100%;
+      background: black;
+      overflow: hidden;
+    }
+    #landscape-warning {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(0,0,0,0.9);
+      color: white;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 2em;
+      z-index: 9999;
+    }
+    .canvas {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+    }
+  </style>
+</head>
+<body>
+  <div id="landscape-warning">👉 Vui lòng xoay ngang điện thoại để bắt đầu 👈</div>
+  <canvas class="canvas"></canvas>
+
+  <script>
+  var S = {
+    init: function () {
+      var action = window.location.href,
+          i = action.indexOf('?a=');
+
+      S.Drawing.init('.canvas');
+      document.body.classList.add('body--ready');
+
+      if (i !== -1) {
+        S.UI.simulate(decodeURI(action).substring(i + 3));
+      } else {
+        S.UI.simulate('|CHÚC MỪNG SINH NHẬT|Kim|Khánh|Chi|06/09|♥♥♥♥♥|');
+      }
+
+      S.Drawing.loop(function () {
+        S.Shape.render();
+      });
+    }
+  };
+
+  S.Drawing = (function () {
+    var canvas, context, renderFn,
+        requestFrame = window.requestAnimationFrame       ||
+                       window.webkitRequestAnimationFrame ||
+                       window.mozRequestAnimationFrame    ||
+                       window.oRequestAnimationFrame      ||
+                       window.msRequestAnimationFrame     ||
+                       function(callback) {
+                         window.setTimeout(callback, 1000 / 60);
+                       };
+
+    return {
+      init: function (el) {
+        canvas = document.querySelector(el);
+        context = canvas.getContext('2d');
+        this.adjustCanvas();
+        window.addEventListener('resize', this.adjustCanvas);
+      },
+
+      loop: function (fn) {
+        renderFn = !renderFn ? fn : renderFn;
+        this.clearFrame();
+        renderFn();
+        requestFrame.call(window, this.loop.bind(this));
+      },
+
+      adjustCanvas: function () {
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
+      },
+
+      clearFrame: function () {
+        context.fillStyle = 'rgba(0,0,0,0.3)';
+        context.fillRect(0, 0, canvas.width, canvas.height);
+      },
+
+      getArea: function () {
+        return { w: canvas.width, h: canvas.height };
+      },
+
+      drawCircle: function (p, c) {
+        context.fillStyle = c;
+        context.beginPath();
+        context.arc(p.x, p.y, p.z, 0, 2 * Math.PI, true);
+        context.closePath();
+        context.fill();
+      }
+    }
+  }());
+
+  function Point(args) {
+    this.x = args.x;
+    this.y = args.y;
+    this.z = args.z || 2;
+    this.a = args.a || 1;
+    this.h = args.h || 0;
+  }
+
+  S.ShapeBuilder = (function () {
+    var gap = 13,
+        shapeCanvas = document.createElement('canvas'),
+        shapeContext = shapeCanvas.getContext('2d'),
+        fontSize = 500,
+        fontFamily = 'Avenir, Helvetica Neue, Helvetica, Arial, sans-serif';
+
+    function fit() {
+      shapeCanvas.width = Math.floor(window.innerWidth / gap) * gap;
+      shapeCanvas.height = Math.floor(window.innerHeight / gap) * gap;
+      shapeContext.fillStyle = '#FFD700'; // vàng
+      shapeContext.textBaseline = 'middle';
+      shapeContext.textAlign = 'center';
+    }
+
+    function processCanvas() {
+      var pixels = shapeContext.getImageData(0, 0, shapeCanvas.width, shapeCanvas.height).data;
+      var dots = [], x = 0, y = 0;
+
+      for (var p = 0; p < pixels.length; p += (4 * gap)) {
+        if (pixels[p + 3] > 0) {
+          dots.push(new Point({ x: x, y: y }));
+        }
+
+        x += gap;
+        if (x >= shapeCanvas.width) {
+          x = 0;
+          y += gap;
+          p += gap * 4 * shapeCanvas.width;
+        }
+      }
+      return { dots: dots };
+    }
+
+    function setFontSize(s) {
+      shapeContext.font = 'bold ' + s + 'px ' + fontFamily;
+    }
+
+    function isNumber(n) {
+      return !isNaN(parseFloat(n)) && isFinite(n);
+    }
+
+    function init() {
+      fit();
+      window.addEventListener('resize', fit);
+    }
+    init();
+
+    return {
+      letter: function (l) {
+        var s = 0;
+        setFontSize(fontSize);
+        s = Math.min(fontSize,
+          (shapeCanvas.width / shapeContext.measureText(l).width) * 0.8 * fontSize,
+          (shapeCanvas.height / fontSize) * (isNumber(l) ? 1 : 0.45) * fontSize);
+        setFontSize(s);
+        shapeContext.clearRect(0, 0, shapeCanvas.width, shapeCanvas.height);
+        shapeContext.fillText(l, shapeCanvas.width / 2, shapeCanvas.height / 2);
+        return processCanvas();
+      }
+    };
+  }());
+
+  S.Shape = (function () {
+    var dots = [];
+
+    return {
+      render: function () {
+        for (var d = 0; d < dots.length; d++) {
+          S.Drawing.drawCircle(dots[d], '#FFD700');
+        }
+      },
+
+      switchShape: function (n) {
+        dots = n.dots;
+      }
+    };
+  }());
+
+  S.UI = (function () {
+    var current = 0, queue, time = 2000;
+
+    function next() {
+      current++;
+      if (current < queue.length) {
+        setTimeout(function () {
+          S.UI.simulate(queue[current]);
+        }, time);
+      }
+    }
+
+    return {
+      simulate: function (str) {
+        queue = str.split('|');
+        var shape = S.ShapeBuilder.letter(queue[current]);
+        S.Shape.switchShape(shape);
+        setTimeout(next, time);
+      }
+    };
+  }());
+
+  // Orientation check
+  let landscapeUnlocked = false;
+  function checkOrientation() {
+    if (!landscapeUnlocked) {
+      if (window.innerWidth > window.innerHeight) {
+        document.getElementById("landscape-warning").style.display = "none";
+        landscapeUnlocked = true;
+        S.init();
+      } else {
+        document.getElementById("landscape-warning").style.display = "flex";
+      }
+    }
+  }
+  window.addEventListener("resize", checkOrientation);
+  window.addEventListener("load", checkOrientation);
+  </script>
+</body>
+</html>
