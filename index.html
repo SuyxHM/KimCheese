@@ -640,7 +640,7 @@ S.Dot = function (x, y) {
   this.e = 0.07;
   this.s = true;
 
-  this.c = new S.Color(255, 255, 255, this.p.a);
+  this.c = new S.Color(255, 215, 0, this.p.a);
 
   this.t = this.clone();
   this.q = [];
@@ -740,10 +740,10 @@ S.Dot.prototype = {
 
 
 S.ShapeBuilder = (function () {
-  var gap = 13,
+  var gap = 20,
     shapeCanvas = document.createElement('canvas'),
     shapeContext = shapeCanvas.getContext('2d'),
-    fontSize = 500,
+    fontSize = 250,
     fontFamily = 'Avenir, Helvetica Neue, Helvetica, Arial, sans-serif';
 
   function fit() {
