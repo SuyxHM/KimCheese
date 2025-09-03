@@ -330,7 +330,7 @@ var S = {
     if (i !== -1) {
       S.UI.simulate(decodeURI(action).substring(i + 3));
     } else {
-      S.UI.simulate('|#countdown 5||CHÚC MỪNG SINH NHẬT|Kim|Khánh|Chi|06/09||♥♥♥♥♥|');
+      S.UI.simulate('|#countdown 6|Kim|Khánh|Chi|06/09||♥♥♥♥♥♥|');
     }
 
     S.Drawing.loop(function () {
@@ -739,48 +739,55 @@ S.Dot.prototype = {
 }
 
 S.ShapeBuilder = (function () {
-  var gap = 8; // khoảng cách giữa các điểm
-  var c = document.createElement('canvas'),
-      ctx = c.getContext('2d');
+  var gap = 8,
+    shapeCanvas = document.createElement('canvas'),
+    shapeContext = shapeCanvas.getContext('2d'),
+    fontSize = 500,
+    fontFamily = 'Avenir, Helvetica Neue, Helvetica, Arial, sans-serif';
 
-  function resize() {
-    c.width = window.innerWidth;
-    c.height = window.innerHeight;
+  function fit() {
+    shapeCanvas.width = Math.floor(window.innerWidth / gap) * gap;
+    shapeCanvas.height = Math.floor(window.innerHeight / gap) * gap;
+    shapeContext.fillStyle = 'red';
+    shapeContext.textBaseline = 'middle';
+    shapeContext.textAlign = 'center';
   }
-  resize();
-  window.addEventListener('resize', resize);
 
-  function process() {
-    var pixels = ctx.getImageData(0, 0, c.width, c.height).data;
-    var dots = [];
+  function processCanvas() {
+    var pixels = shapeContext.getImageData(0, 0, shapeCanvas.width, shapeCanvas.height).data;
+    dots = [],
+      pixels,
+      x = 0,
+      y = 0,
+      fx = shapeCanvas.width,
+      fy = shapeCanvas.height,
+      w = 0,
+      h = 0;
 
-    for (let y = 0; y < c.height; y += gap) {
-      for (let x = 0; x < c.width; x += gap) {
-        let idx = (y * c.width + x) * 4 + 3; // alpha channel
-        if (pixels[idx] > 128) {
-          dots.push(new S.Point({ x, y }));
-        }
+    for (var p = 0; p < pixels.length; p += (4 * gap)) {
+      if (pixels[p + 3] > 0) {
+        dots.push(new S.Point({
+          x: x,
+          y: y
+        }));
+
+        w = x > w ? x : w;
+        h = y > h ? y : h;
+        fx = x < fx ? x : fx;
+        fy = y < fy ? y : fy;
+      }
+
+      x += gap;
+
+      if (x >= shapeCanvas.width) {
+        x = 0;
+        y += gap;
+        p += gap * 4 * shapeCanvas.width;
       }
     }
-    return { dots: dots, w: c.width, h: c.height };
+
+    return { dots: dots, w: w + fx, h: h + fy };
   }
-
-  return {
-    letter: function (l) {
-      ctx.clearRect(0, 0, c.width, c.height);
-
-      // fontSize cố định cho mọi ký tự
-      var fixedSize = Math.min(c.width, c.height) * 0.6;
-      ctx.font = `bold ${fixedSize}px sans-serif`;
-      ctx.textAlign = "center";
-      ctx.textBaseline = "middle";
-
-      ctx.fillText(l, c.width / 2, c.height / 2);
-
-      return process();
-    }
-  };
-})();
 
 
   function setFontSize(s) {
