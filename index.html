@@ -738,57 +738,89 @@ S.Dot.prototype = {
   }
 }
 
+	S.ShapeBuilder = (function(){
+  var gap = 20; 
+  var c = document.createElement('canvas'), ctx=c.getContext('2d');
+  function resize(){ c.width=window.innerWidth; c.height=window.innerHeight; }
+  resize(); window.addEventListener('resize',resize);
 
-S.ShapeBuilder = (function () {
-  var gap = 7,
-    shapeCanvas = document.createElement('canvas'),
-    shapeContext = shapeCanvas.getContext('2d'),
-    fontSize = 800,
-    fontFamily = 'Avenir, Helvetica Neue, Helvetica, Arial, sans-serif';
-
-  function fit() {
-    shapeCanvas.width = Math.floor(window.innerWidth / gap) * gap;
-    shapeCanvas.height = Math.floor(window.innerHeight / gap) * gap;
-    shapeContext.fillStyle = 'red';
-    shapeContext.textBaseline = 'middle';
-    shapeContext.textAlign = 'center';
-  }
-
-  function processCanvas() {
-    var pixels = shapeContext.getImageData(0, 0, shapeCanvas.width, shapeCanvas.height).data;
-    dots = [],
-      pixels,
-      x = 0,
-      y = 0,
-      fx = shapeCanvas.width,
-      fy = shapeCanvas.height,
-      w = 0,
-      h = 0;
-
-    for (var p = 0; p < pixels.length; p += (4 * gap)) {
-      if (pixels[p + 3] > 0) {
-        dots.push(new S.Point({
-          x: x,
-          y: y
-        }));
-
-        w = x > w ? x : w;
-        h = y > h ? y : h;
-        fx = x < fx ? x : fx;
-        fy = y < fy ? y : fy;
-      }
-
-      x += gap;
-
-      if (x >= shapeCanvas.width) {
-        x = 0;
-        y += gap;
-        p += gap * 4 * shapeCanvas.width;
-      }
+  function process(){
+    var pixels = ctx.getImageData(0,0,c.width,c.height).data;
+    var dots=[],x=0,y=0;
+    for(var p=0;p<pixels.length;p+=4*gap){
+      if(pixels[p+3]>0){ dots.push(new S.Point({x:x,y:y})); }
+      x+=gap; if(x>=c.width){x=0;y+=gap; p+=gap*4*c.width;}
     }
-
-    return { dots: dots, w: w + fx, h: h + fy };
+    return {dots:dots,w:c.width,h:c.height};
   }
+
+  return {
+    letter: function(l){
+      ctx.clearRect(0,0,c.width,c.height);
+
+      // ép fontSize cố định theo màn hình, không thay đổi giữa các ký tự
+      var fixedSize = Math.min(c.width, c.height) * 0.6; 
+      ctx.font = `bold ${fixedSize}px sans-serif`;
+      ctx.textAlign="center"; ctx.textBaseline="middle";
+
+      ctx.fillText(l, c.width/2, c.height/2);
+
+      return process();
+    }
+  };
+}());
+
+
+// S.ShapeBuilder = (function () {
+//   var gap = 7,
+//     shapeCanvas = document.createElement('canvas'),
+//     shapeContext = shapeCanvas.getContext('2d'),
+//     fontSize = 800,
+//     fontFamily = 'Avenir, Helvetica Neue, Helvetica, Arial, sans-serif';
+
+//   function fit() {
+//     shapeCanvas.width = Math.floor(window.innerWidth / gap) * gap;
+//     shapeCanvas.height = Math.floor(window.innerHeight / gap) * gap;
+//     shapeContext.fillStyle = 'red';
+//     shapeContext.textBaseline = 'middle';
+//     shapeContext.textAlign = 'center';
+//   }
+
+//   function processCanvas() {
+//     var pixels = shapeContext.getImageData(0, 0, shapeCanvas.width, shapeCanvas.height).data;
+//     dots = [],
+//       pixels,
+//       x = 0,
+//       y = 0,
+//       fx = shapeCanvas.width,
+//       fy = shapeCanvas.height,
+//       w = 0,
+//       h = 0;
+
+//     for (var p = 0; p < pixels.length; p += (4 * gap)) {
+//       if (pixels[p + 3] > 0) {
+//         dots.push(new S.Point({
+//           x: x,
+//           y: y
+//         }));
+
+//         w = x > w ? x : w;
+//         h = y > h ? y : h;
+//         fx = x < fx ? x : fx;
+//         fy = y < fy ? y : fy;
+//       }
+
+//       x += gap;
+
+//       if (x >= shapeCanvas.width) {
+//         x = 0;
+//         y += gap;
+//         p += gap * 4 * shapeCanvas.width;
+//       }
+//     }
+
+//     return { dots: dots, w: w + fx, h: h + fy };
+//   }
 
   function setFontSize(s) {
     shapeContext.font = 'bold ' + s + 'px ' + fontFamily;
