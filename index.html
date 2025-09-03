@@ -738,37 +738,50 @@ S.Dot.prototype = {
   }
 }
 
-	S.ShapeBuilder = (function(){
-  var gap = 20; 
-  var c = document.createElement('canvas'), ctx=c.getContext('2d');
-  function resize(){ c.width=window.innerWidth; c.height=window.innerHeight; }
-  resize(); window.addEventListener('resize',resize);
+S.ShapeBuilder = (function () {
+  var gap = 8; // khoảng cách giữa các điểm
+  var c = document.createElement('canvas'),
+      ctx = c.getContext('2d');
 
-  function process(){
-    var pixels = ctx.getImageData(0,0,c.width,c.height).data;
-    var dots=[],x=0,y=0;
-    for(var p=0;p<pixels.length;p+=4*gap){
-      if(pixels[p+3]>0){ dots.push(new S.Point({x:x,y:y})); }
-      x+=gap; if(x>=c.width){x=0;y+=gap; p+=gap*4*c.width;}
+  function resize() {
+    c.width = window.innerWidth;
+    c.height = window.innerHeight;
+  }
+  resize();
+  window.addEventListener('resize', resize);
+
+  function process() {
+    var pixels = ctx.getImageData(0, 0, c.width, c.height).data;
+    var dots = [];
+
+    for (let y = 0; y < c.height; y += gap) {
+      for (let x = 0; x < c.width; x += gap) {
+        let idx = (y * c.width + x) * 4 + 3; // alpha channel
+        if (pixels[idx] > 128) {
+          dots.push(new S.Point({ x, y }));
+        }
+      }
     }
-    return {dots:dots,w:c.width,h:c.height};
+    return { dots: dots, w: c.width, h: c.height };
   }
 
   return {
-    letter: function(l){
-      ctx.clearRect(0,0,c.width,c.height);
+    letter: function (l) {
+      ctx.clearRect(0, 0, c.width, c.height);
 
-      // ép fontSize cố định theo màn hình, không thay đổi giữa các ký tự
-      var fixedSize = Math.min(c.width, c.height) * 0.6; 
+      // fontSize cố định cho mọi ký tự
+      var fixedSize = Math.min(c.width, c.height) * 0.6;
       ctx.font = `bold ${fixedSize}px sans-serif`;
-      ctx.textAlign="center"; ctx.textBaseline="middle";
+      ctx.textAlign = "center";
+      ctx.textBaseline = "middle";
 
-      ctx.fillText(l, c.width/2, c.height/2);
+      ctx.fillText(l, c.width / 2, c.height / 2);
 
       return process();
     }
   };
-}());
+})();
+
 
 
 // S.ShapeBuilder = (function () {
