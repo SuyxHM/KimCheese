@@ -25,6 +25,17 @@ canvas {
   display: none;
   background: rgba(0,0,0,0.8);
 }
+#message {
+  position: absolute;
+  bottom: 10%;
+  width: 100%;
+  text-align: center;
+  font-size: 28px;
+  font-weight: bold;
+  color: #fff;
+  text-shadow: 0 0 10px #000;
+  display: none;
+}
 </style>
 </head>
 <body>
@@ -34,6 +45,8 @@ canvas {
 <canvas id="textCanvas"></canvas>
 <!-- Lottie Cake -->
 <div id="lottie"></div>
+<!-- Message -->
+<div id="message">Đã ghi nhận lời chúc, vui lòng thông báo cho người đó.</div>
 
 <!-- Lottie Web -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/lottie-web/5.12.2/lottie.min.js"></script>
@@ -374,7 +387,7 @@ S.ShapeBuilder = (function () {
     points.splice(dots.length);
   }
 
-  let messages = ["","Chúc mừng sinh nhật", "Kim Khánh Chi", "06/09","","Nhắm mắt và ước nha!"];
+  let messages = ["","Chúc mừng sinh nhật", "Kim Khánh Chi", "06/09","",];
   let i = 0;
   showText(messages[i]);
 
@@ -396,7 +409,8 @@ S.ShapeBuilder = (function () {
 /* =====================
    Cake Lottie + Mic
 ===================== */
-let cakeAnim, blowAnim;
+let cakeAnim, blowAnim, micStream, detecting = true;
+
 function startCakeAnimation(){
   document.getElementById("lottie").style.display = "block";
   cakeAnim = lottie.loadAnimation({
@@ -410,6 +424,8 @@ function startCakeAnimation(){
 }
 
 function switchToBlow(){
+  detecting = false;
+  if(micStream){ micStream.getTracks().forEach(track=>track.stop()); }
   if(cakeAnim){ cakeAnim.destroy(); }
   blowAnim = lottie.loadAnimation({
     container: document.getElementById("lottie"),
@@ -418,17 +434,20 @@ function switchToBlow(){
     autoplay: true,
     path: "cake_blow.json" // 🎂 bánh tắt nến
   });
+  document.getElementById("message").style.display = "block";
 }
 
 function startMic(){
   navigator.mediaDevices.getUserMedia({ audio: true })
     .then(stream=>{
+      micStream = stream;
       const audioCtx = new (window.AudioContext||window.webkitAudioContext)();
       const source = audioCtx.createMediaStreamSource(stream);
       const analyser = audioCtx.createAnalyser();
       source.connect(analyser);
       const data = new Uint8Array(analyser.fftSize);
       function detect(){
+        if(!detecting) return;
         analyser.getByteTimeDomainData(data);
         let rms = 0;
         for(let i=0;i<data.length;i++){
