@@ -2,7 +2,7 @@
 <html>
 <head>
 <meta charset="utf-8">
-<title>Pháo Hoa + Text</title>
+<title>Pháo Hoa + Text + Birthday Cake</title>
 <style>
 html,body {
   margin: 0;
@@ -18,13 +18,25 @@ canvas {
   top: 0;
   left: 0;
 }
+#lottie {
+  position: absolute;
+  top: 0; left: 0;
+  width: 100%; height: 100%;
+  display: none;
+  background: rgba(0,0,0,0.8);
+}
 </style>
 </head>
 <body>
 <!-- canvas pháo hoa -->
 <canvas id="fireworks"></canvas>
-<!-- canvas text (trong suốt, nằm trên pháo hoa) -->
+<!-- canvas text -->
 <canvas id="textCanvas"></canvas>
+<!-- Lottie Cake -->
+<div id="lottie"></div>
+
+<!-- Lottie Web -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/lottie-web/5.12.2/lottie.min.js"></script>
 
 <script>
 /* =====================
@@ -346,7 +358,7 @@ S.ShapeBuilder = (function () {
 
   function render() {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
-    ctx.fillStyle = "#FFFFF0"; // chữ vàng
+    ctx.fillStyle = "#FFFFF0"; 
     points.forEach((p) => { p.update(); p.render(ctx); });
     requestAnimationFrame(render);
   }
@@ -365,10 +377,75 @@ S.ShapeBuilder = (function () {
   let messages = ["","Chúc mừng sinh nhật", "Kim Khánh Chi", "06/09","",];
   let i = 0;
   showText(messages[i]);
-  setInterval(() => { i = (i + 1) % messages.length; showText(messages[i]); }, 6000);
+
+  let interval = setInterval(() => { 
+    i++;
+    if (i < messages.length) {
+      showText(messages[i]);
+    } else {
+      clearInterval(interval);
+      startCakeAnimation();
+    }
+  }, 6000);
 
   render();
 })();
+</script>
+
+<script>
+/* =====================
+   Cake Lottie + Mic
+===================== */
+let cakeAnim, blowAnim;
+function startCakeAnimation(){
+  document.getElementById("lottie").style.display = "block";
+  cakeAnim = lottie.loadAnimation({
+    container: document.getElementById("lottie"),
+    renderer: "svg",
+    loop: true,
+    autoplay: true,
+    path: "cake.json" // 🎂 bánh có nến
+  });
+  startMic();
+}
+
+function switchToBlow(){
+  if(cakeAnim){ cakeAnim.destroy(); }
+  blowAnim = lottie.loadAnimation({
+    container: document.getElementById("lottie"),
+    renderer: "svg",
+    loop: false,
+    autoplay: true,
+    path: "cake_blow.json" // 🎂 bánh tắt nến
+  });
+}
+
+function startMic(){
+  navigator.mediaDevices.getUserMedia({ audio: true })
+    .then(stream=>{
+      const audioCtx = new (window.AudioContext||window.webkitAudioContext)();
+      const source = audioCtx.createMediaStreamSource(stream);
+      const analyser = audioCtx.createAnalyser();
+      source.connect(analyser);
+      const data = new Uint8Array(analyser.fftSize);
+      function detect(){
+        analyser.getByteTimeDomainData(data);
+        let rms = 0;
+        for(let i=0;i<data.length;i++){
+          let v = (data[i]-128)/128;
+          rms += v*v;
+        }
+        rms = Math.sqrt(rms/data.length);
+        if(rms>0.2){ // ngưỡng thổi
+          switchToBlow();
+        } else {
+          requestAnimationFrame(detect);
+        }
+      }
+      detect();
+    })
+    .catch(err=>console.error("Mic error", err));
+}
 </script>
 </body>
 </html>
