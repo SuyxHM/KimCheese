@@ -449,60 +449,87 @@ ctx.beginPath();
      /* ===================== Cake Lottie + Mic ==================== */
  let cakeAnim, blowAnim, micStream, detecting = true;
 
-function startCakeAnimation(){
-  document.getElementById("lottie").style.display = "block";
-  cakeAnim = lottie.loadAnimation({
-    container: document.getElementById("lottie"),
-    renderer: "svg",
-    loop: true,
-    autoplay: true,
-    path: "cake.json" // 🎂 bánh có nến
-  });
-  startMic();
-}
+  // 👉 Thêm hàm nhận diện tiếng thổi
+  function isBlowSound(rms, analyser, audioCtx){
+    const freqData = new Uint8Array(analyser.frequencyBinCount);
+    analyser.getByteFrequencyData(freqData);
 
-function switchToBlow(){
-  detecting = false;
-  if(micStream){ micStream.getTracks().forEach(track=>track.stop()); }
-  if(cakeAnim){ cakeAnim.destroy(); }
-  blowAnim = lottie.loadAnimation({
-    container: document.getElementById("lottie"),
-    renderer: "svg",
-    loop: false,
-    autoplay: true,
-    path: "cake_off.json" // 🎂 bánh tắt nến
-  });
-  document.getElementById("message").style.display = "block";
-}
+    let low=0, high=0, lowCount=0, highCount=0;
+    const nyquist = audioCtx.sampleRate / 2;
 
-function startMic(){
-  navigator.mediaDevices.getUserMedia({ audio: true })
-    .then(stream=>{
-      micStream = stream;
-      const audioCtx = new (window.AudioContext||window.webkitAudioContext)();
-      const source = audioCtx.createMediaStreamSource(stream);
-      const analyser = audioCtx.createAnalyser();
-      source.connect(analyser);
-      const data = new Uint8Array(analyser.fftSize);
-      function detect(){
-        if(!detecting) return;
-        analyser.getByteTimeDomainData(data);
-        let rms = 0;
-        for(let i=0;i<data.length;i++){
-          let v = (data[i]-128)/128;
-          rms += v*v;
-        }
-        rms = Math.sqrt(rms/data.length);
-        if(rms>0.085){ // ngưỡng thổi
-          switchToBlow();
-        } else {
-          requestAnimationFrame(detect);
-        }
+    for(let i=0;i<freqData.length;i++){
+      let freq = i * nyquist / freqData.length;
+      if(freq < 1000){ 
+        low += freqData[i]; 
+        lowCount++; 
+      } else if(freq > 2000){ 
+        high += freqData[i]; 
+        highCount++; 
       }
-      detect();
-    })
-    .catch(err=>console.error("Mic error", err));
-}
+    }
+
+    let avgLow = low / Math.max(1, lowCount);
+    let avgHigh = high / Math.max(1, highCount);
+    return (rms > 0.06 && avgHigh > avgLow * 1.3);
+  }
+
+  function startCakeAnimation(){
+    document.getElementById("lottie").style.display = "block";
+    cakeAnim = lottie.loadAnimation({
+      container: document.getElementById("lottie"),
+      renderer: "svg",
+      loop: true,
+      autoplay: true,
+      path: "cake.json" // 🎂 bánh có nến
+    });
+    startMic();
+  }
+
+  function switchToBlow(){
+    detecting = false;
+    if(micStream){ micStream.getTracks().forEach(track=>track.stop()); }
+    if(cakeAnim){ cakeAnim.destroy(); }
+    blowAnim = lottie.loadAnimation({
+      container: document.getElementById("lottie"),
+      renderer: "svg",
+      loop: false,
+      autoplay: true,
+      path: "cake_off.json" // 🎂 bánh tắt nến
+    });
+    document.getElementById("message").style.display = "block";
+  }
+
+  function startMic(){
+    navigator.mediaDevices.getUserMedia({ audio: true })
+      .then(stream=>{
+        micStream = stream;
+        const audioCtx = new (window.AudioContext||window.webkitAudioContext)();
+        const source = audioCtx.createMediaStreamSource(stream);
+        const analyser = audioCtx.createAnalyser();
+        source.connect(analyser);
+        const data = new Uint8Array(analyser.fftSize);
+
+        function detect(){
+          if(!detecting) return;
+          analyser.getByteTimeDomainData(data);
+          let rms = 0;
+          for(let i=0;i<data.length;i++){
+            let v = (data[i]-128)/128;
+            rms += v*v;
+          }
+          rms = Math.sqrt(rms/data.length);
+
+          // 👉 Dùng hàm mới
+          if(isBlowSound(rms, analyser, audioCtx)){
+            switchToBlow();
+          } else {
+            requestAnimationFrame(detect);
+          }
+        }
+        detect();
+      })
+      .catch(err=>console.error("Mic error", err));
+  }
   </script>
 </body>
 </html>
