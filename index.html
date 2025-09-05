@@ -426,6 +426,7 @@ canvas {
     document.getElementById("overlay").addEventListener("click", function() {
       this.style.display = "none"; // Hide overlay
       document.getElementById("click-sound").play(); // Play the click sound
+      document.getElementById("bg-music").play(); 
       showText(messages[i]);
 
       let interval = setInterval(() => { 
@@ -489,7 +490,7 @@ function startMic(){
           rms += v*v;
         }
         rms = Math.sqrt(rms/data.length);
-        if(rms>0.1){ // ngưỡng thổi
+        if(rms>0.05){ // ngưỡng thổi
           switchToBlow();
         } else {
           requestAnimationFrame(detect);
