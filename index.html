@@ -1,6 +1,7 @@
 <!doctype html>
 <html>
 <head>
+  <link href="https://fonts.googleapis.com/css2?family=Pacifico&display=swap" rel="stylesheet">
 <meta charset="utf-8">
 <title>Kim Chese</title>
 <style>
@@ -326,9 +327,20 @@ canvas {
     this.setTarget = function (p) { this.tx = p.x; this.ty = p.y; };
     this.update = function () { this.x += (this.tx - this.x) * 0.1; this.y += (this.ty - this.y) * 0.1; };
     this.render = function (ctx) {
-      ctx.beginPath();
-      ctx.arc(this.x, this.y, this.r, 0, Math.PI * 2, false);
-      ctx.fill();
+ctx.beginPath();
+  
+  // Danh sách màu giới hạn (cầu vồng cơ bản)
+  const colors = [ "orange", "yellow"];
+       if (this.frameCount > 60) { // đổi màu mỗi 30 frame (~0.5 giây)
+   const colors = [ "orange", "yellow"];
+    this.frameCount = 0;
+  }
+  
+  // Chọn màu ngẫu nhiên trong danh sách
+  ctx.fillStyle = colors[Math.floor(Math.random() * colors.length)];
+  
+  ctx.arc(this.x, this.y, this.r, 0, Math.PI * 2, false);
+  ctx.fill();
     };
   };
 
@@ -370,7 +382,7 @@ canvas {
       paragraph: function (text) {
         ctx.clearRect(0, 0, c.width, c.height);
         let fixedSize = Math.min(c.width, c.height) * 0.1;
-        ctx.font = `bold ${fixedSize}px sans-serif`;
+        ctx.font = `${fixedSize}px 'Pacifico', cursive`;
         ctx.textAlign = "center";
         ctx.textBaseline = "middle";
         let maxWidth = c.width * 0.8, lineHeight = fixedSize * 1.2;
