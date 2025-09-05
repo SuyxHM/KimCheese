@@ -36,382 +36,414 @@ canvas {
   text-shadow: 0 0 10px #000;
   display: none;
 }
+
+/* New Overlay Styles */
+#overlay {
+  position: fixed;
+  top: 0; left: 0;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  background: rgba(0, 0, 0, 0.6);
+  z-index: 9999;
+  flex-direction: column;
+}
+#overlay img {
+  width: 200px;
+  margin-bottom: 20px;
+}
+#overlay p {
+  font-size: 24px;
+  font-weight: bold;
+  color: #fff;
+  text-shadow: 0 0 10px #000;
+}
 </style>
 </head>
 <body>
   <audio id="bg-music" src="happy_birthday.mp3" autoplay loop></audio>
+  <!-- Add a click sound -->
+  <audio id="click-sound" src="click_sound.mp3"></audio> <!-- Thêm âm thanh click -->
   
-<!-- canvas pháo hoa -->
-<canvas id="fireworks"></canvas>
-<!-- canvas text -->
-<canvas id="textCanvas"></canvas>
-<!-- Lottie Cake -->
-<div id="lottie"></div>
-<!-- Message -->
-<div id="message">Đã ghi nhận lời chúc, vui lòng thông báo cho người đó.</div>
+  <!-- canvas pháo hoa -->
+  <canvas id="fireworks"></canvas>
+  <!-- canvas text -->
+  <canvas id="textCanvas"></canvas>
+  <!-- Lottie Cake -->
+  <div id="lottie"></div>
+  <!-- Message -->
+  <div id="message">Thổi tắt nến của người khác không làm em sáng hơn. Nhưng đây là nến của em nên mong em sẽ luôn toả sáng nhaa!\nMong lời ước của em sẽ sớm thành hiện thực.</div>
 
-<!-- Lottie Web -->
-<script src="https://cdnjs.cloudflare.com/ajax/libs/lottie-web/5.12.2/lottie.min.js"></script>
+  <!-- Overlay with Tap Image and Text -->
+  <div id="overlay">
+    <img src="tap.png" alt="Tap to Start" />
+    <p>Nhấn để bắt đầu</p>
+  </div>
 
-<script>
-/* =====================
-   Fireworks
-===================== */
-function initVars(){
-  pi = Math.PI;
-  canvas = document.getElementById("fireworks");
-  ctx = canvas.getContext("2d");
-  canvas.width = canvas.clientWidth;
-  canvas.height = canvas.clientHeight;
-  cx = canvas.width/2;
-  cy = canvas.height/2;
+  <!-- Lottie Web -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/lottie-web/5.12.2/lottie.min.js"></script>
 
-  playerZ=-25;
-  playerX=playerY=playerVX=playerVY=playerVZ=pitch=yaw=pitchV=yawV=0;
-  scale=600;
+  <script>
+  /* =====================
+     Fireworks
+  ===================== */
+  function initVars(){
+    pi = Math.PI;
+    canvas = document.getElementById("fireworks");
+    ctx = canvas.getContext("2d");
+    canvas.width = canvas.clientWidth;
+    canvas.height = canvas.clientHeight;
+    cx = canvas.width/2;
+    cy = canvas.height/2;
 
-  seedTimer=0; seedInterval=5; seedLife=100; gravity=.02;
-  seeds=[]; sparks=[]; sparkPics=[];
-  s="https://cantelope.org/NYE/";
+    playerZ=-25;
+    playerX=playerY=playerVX=playerVY=playerVZ=pitch=yaw=pitchV=yawV=0;
+    scale=600;
 
-  for(let i=1;i<=10;i++){
-    let sparkPic=new Image();
-    sparkPic.src=s+"spark"+i+".png";
-    sparkPics.push(sparkPic);
+    seedTimer=0; seedInterval=5; seedLife=100; gravity=.02;
+    seeds=[]; sparks=[]; sparkPics=[];
+    s="https://cantelope.org/NYE/";
+
+    for(let i=1;i<=10;i++){
+      let sparkPic=new Image();
+      sparkPic.src=s+"spark"+i+".png";
+      sparkPics.push(sparkPic);
+    }
+
+    pow1=new Audio(s+"pow1.ogg");
+    pow2=new Audio(s+"pow2.ogg");
+    pow3=new Audio(s+"pow3.ogg");
+    pow4=new Audio(s+"pow4.ogg");
+    frames = 0;
   }
 
-  pow1=new Audio(s+"pow1.ogg");
-  pow2=new Audio(s+"pow2.ogg");
-  pow3=new Audio(s+"pow3.ogg");
-  pow4=new Audio(s+"pow4.ogg");
-  frames = 0;
-}
-
-function rasterizePoint(x,y,z){
-  var p,d;
-  x-=playerX; y-=playerY; z-=playerZ;
-  p=Math.atan2(x,z);
-  d=Math.sqrt(x*x+z*z);
-  x=Math.sin(p-yaw)*d;
-  z=Math.cos(p-yaw)*d;
-  p=Math.atan2(y,z);
-  d=Math.sqrt(y*y+z*z);
-  y=Math.sin(p-pitch)*d;
-  z=Math.cos(p-pitch)*d;
-  var rx1=-1000,ry1=1,rx2=1000,ry2=1,rx3=0,ry3=0,rx4=x,ry4=z;
-  var uc=(ry4-ry3)*(rx2-rx1)-(rx4-rx3)*(ry2-ry1);
-  if(!uc) return {x:0,y:0,d:-1};
-  var ua=((rx4-rx3)*(ry1-ry3)-(ry4-ry3)*(rx1-rx3))/uc;
-  var ub=((rx2-rx1)*(ry1-ry3)-(ry2-ry1)*(rx1-rx3))/uc;
-  if(!z)z=.000000001;
-  return {
-    x:cx+(rx1+ua*(rx2-rx1))*scale,
-    y:cy+y/z*scale,
-    d:(ua>0&&ua<1&&ub>0&&ub<1) ? Math.sqrt(x*x+y*y+z*z) : -1
-  };
-}
-
-function spawnSeed(){
-  let seed={};
-  seed.x=-50+Math.random()*100;
-  seed.y=25;
-  seed.z=-50+Math.random()*100;
-  seed.vx=.1-Math.random()*.2;
-  seed.vy=-1.5;
-  seed.vz=.1-Math.random()*.2;
-  seed.born=frames;
-  seeds.push(seed);
-}
-
-function splode(x,y,z){
-  let t=5+parseInt(Math.random()*150);
-  let sparkV=1+Math.random()*2.5;
-  let type=parseInt(Math.random()*3);
-  let pic1,pic2,pic3;
-
-  if(type===0){ pic1=parseInt(Math.random()*10); }
-  if(type===1){ pic1=parseInt(Math.random()*10); do{pic2=parseInt(Math.random()*10);}while(pic2===pic1); }
-  if(type===2){
-    pic1=parseInt(Math.random()*10);
-    do{pic2=parseInt(Math.random()*10);}while(pic2===pic1);
-    do{pic3=parseInt(Math.random()*10);}while(pic3===pic1||pic3===pic2);
+  function rasterizePoint(x,y,z){
+    var p,d;
+    x-=playerX; y-=playerY; z-=playerZ;
+    p=Math.atan2(x,z);
+    d=Math.sqrt(x*x+z*z);
+    x=Math.sin(p-yaw)*d;
+    z=Math.cos(p-yaw)*d;
+    p=Math.atan2(y,z);
+    d=Math.sqrt(y*y+z*z);
+    y=Math.sin(p-pitch)*d;
+    z=Math.cos(p-pitch)*d;
+    var rx1=-1000,ry1=1,rx2=1000,ry2=1,rx3=0,ry3=0,rx4=x,ry4=z;
+    var uc=(ry4-ry3)*(rx2-rx1)-(rx4-rx3)*(ry2-ry1);
+    if(!uc) return {x:0,y:0,d:-1};
+    var ua=((rx4-rx3)*(ry1-ry3)-(ry4-ry3)*(rx1-rx3))/uc;
+    var ub=((rx2-rx1)*(ry1-ry3)-(ry2-ry1)*(rx1-rx3))/uc;
+    if(!z)z=.000000001;
+    return {
+      x:cx+(rx1+ua*(rx2-rx1))*scale,
+      y:cy+y/z*scale,
+      d:(ua>0&&ua<1&&ub>0&&ub<1) ? Math.sqrt(x*x+y*y+z*z) : -1
+    };
   }
 
-  for(let m=1;m<t;m++){
-    let spark={};
-    spark.x=x; spark.y=y; spark.z=z;
-    let p1=pi*2*Math.random();
-    let p2=pi*Math.random();
-    let v=sparkV*(1+Math.random()/6);
-    spark.vx=Math.sin(p1)*Math.sin(p2)*v;
-    spark.vz=Math.cos(p1)*Math.sin(p2)*v;
-    spark.vy=Math.cos(p2)*v;
-    if(type===0) spark.img=sparkPics[pic1];
-    if(type===1) spark.img=sparkPics[Math.random()<0.5?pic1:pic2];
+  function spawnSeed(){
+    let seed={};
+    seed.x=-50+Math.random()*100;
+    seed.y=25;
+    seed.z=-50+Math.random()*100;
+    seed.vx=.1-Math.random()*.2;
+    seed.vy=-1.5;
+    seed.vz=.1-Math.random()*.2;
+    seed.born=frames;
+    seeds.push(seed);
+  }
+
+  function splode(x,y,z){
+    let t=5+parseInt(Math.random()*150);
+    let sparkV=1+Math.random()*2.5;
+    let type=parseInt(Math.random()*3);
+    let pic1,pic2,pic3;
+
+    if(type===0){ pic1=parseInt(Math.random()*10); }
+    if(type===1){ pic1=parseInt(Math.random()*10); do{pic2=parseInt(Math.random()*10);}while(pic2===pic1); }
     if(type===2){
-      let r=parseInt(Math.random()*3);
-      spark.img=[sparkPics[pic1],sparkPics[pic2],sparkPics[pic3]][r];
+      pic1=parseInt(Math.random()*10);
+      do{pic2=parseInt(Math.random()*10);}while(pic2===pic1);
+      do{pic3=parseInt(Math.random()*10);}while(pic3===pic1||pic3===pic2);
     }
-    spark.radius=25+Math.random()*50;
-    spark.alpha=1;
-    spark.trail=[];
-    sparks.push(spark);
+
+    for(let m=1;m<t;m++){
+      let spark={};
+      spark.x=x; spark.y=y; spark.z=z;
+      let p1=pi*2*Math.random();
+      let p2=pi*Math.random();
+      let v=sparkV*(1+Math.random()/6);
+      spark.vx=Math.sin(p1)*Math.sin(p2)*v;
+      spark.vz=Math.cos(p1)*Math.sin(p2)*v;
+      spark.vy=Math.cos(p2)*v;
+      if(type===0) spark.img=sparkPics[pic1];
+      if(type===1) spark.img=sparkPics[Math.random()<0.5?pic1:pic2];
+      if(type===2){
+        let r=parseInt(Math.random()*3);
+        spark.img=[sparkPics[pic1],sparkPics[pic2],sparkPics[pic3]][r];
+      }
+      spark.radius=25+Math.random()*50;
+      spark.alpha=1;
+      spark.trail=[];
+      sparks.push(spark);
+    }
+
+    let pow;
+    switch(parseInt(Math.random()*4)){
+      case 0: pow=new Audio(s+"pow1.ogg"); break;
+      case 1: pow=new Audio(s+"pow2.ogg"); break;
+      case 2: pow=new Audio(s+"pow3.ogg"); break;
+      case 3: pow=new Audio(s+"pow4.ogg"); break;
+    }
+    let d=Math.sqrt((x-playerX)**2+(y-playerY)**2+(z-playerZ)**2);
+    pow.volume=1.5/(1+d/10);
+    pow.play();
   }
 
-  let pow;
-  switch(parseInt(Math.random()*4)){
-    case 0: pow=new Audio(s+"pow1.ogg"); break;
-    case 1: pow=new Audio(s+"pow2.ogg"); break;
-    case 2: pow=new Audio(s+"pow3.ogg"); break;
-    case 3: pow=new Audio(s+"pow4.ogg"); break;
-  }
-  let d=Math.sqrt((x-playerX)**2+(y-playerY)**2+(z-playerZ)**2);
-  pow.volume=1.5/(1+d/10);
-  pow.play();
-}
-
-function doLogic(){
-  if(seedTimer<frames){
-    seedTimer=frames+seedInterval*Math.random()*10;
-    spawnSeed();
-  }
-  for(let i=0;i<seeds.length;i++){
-    seeds[i].vy+=gravity;
-    seeds[i].x+=seeds[i].vx;
-    seeds[i].y+=seeds[i].vy;
-    seeds[i].z+=seeds[i].vz;
-    if(frames-seeds[i].born>seedLife){
-      splode(seeds[i].x,seeds[i].y,seeds[i].z);
-      seeds.splice(i,1);
+  function doLogic(){
+    if(seedTimer<frames){
+      seedTimer=frames+seedInterval*Math.random()*10;
+      spawnSeed();
     }
-  }
-  for(let i=0;i<sparks.length;i++){
-    if(sparks[i].alpha>0 && sparks[i].radius>5){
-      sparks[i].alpha-=.01;
-      sparks[i].radius/=1.02;
-      sparks[i].vy+=gravity;
-      let point={x:sparks[i].x,y:sparks[i].y,z:sparks[i].z};
-      if(sparks[i].trail.length){
-        let x=sparks[i].trail.at(-1).x;
-        let y=sparks[i].trail.at(-1).y;
-        let z=sparks[i].trail.at(-1).z;
-        let d=((point.x-x)**2+(point.y-y)**2+(point.z-z)**2);
-        if(d>9){ sparks[i].trail.push(point); }
-      }else{ sparks[i].trail.push(point); }
-      if(sparks[i].trail.length>5) sparks[i].trail.shift();
-      sparks[i].x+=sparks[i].vx;
-      sparks[i].y+=sparks[i].vy;
-      sparks[i].z+=sparks[i].vz;
-      sparks[i].vx/=1.075;
-      sparks[i].vy/=1.075;
-      sparks[i].vz/=1.075;
-    }else{
-      sparks.splice(i,1);
-    }
-  }
-  let p=Math.atan2(playerX,playerZ);
-  let d=Math.sqrt(playerX**2+playerZ**2);
-  d+=Math.sin(frames/80)/1.25;
-  let t=Math.sin(frames/200)/40;
-  playerX=Math.sin(p+t)*d;
-  playerZ=Math.cos(p+t)*d;
-  yaw=pi+p+t;
-}
-
-function draw(){
-  ctx.clearRect(0,0,cx*2,cy*2);
-  ctx.fillStyle="#ff8";
-  for(let i=-100;i<100;i+=3){
-    for(let j=-100;j<100;j+=4){
-      let x=i,z=j,y=25;
-      let point=rasterizePoint(x,y,z);
-      if(point.d!=-1){
-        let size=250/(1+point.d);
-        let d=Math.sqrt(x*x+z*z);
-        let a=0.75 - Math.pow(d/100,6)*0.75;
-        if(a>0){
-          ctx.globalAlpha=a;
-          ctx.fillRect(point.x-size/2,point.y-size/2,size,size);
-        }
+    for(let i=0;i<seeds.length;i++){
+      seeds[i].vy+=gravity;
+      seeds[i].x+=seeds[i].vx;
+      seeds[i].y+=seeds[i].vy;
+      seeds[i].z+=seeds[i].vz;
+      if(frames-seeds[i].born>seedLife){
+        splode(seeds[i].x,seeds[i].y,seeds[i].z);
+        seeds.splice(i,1);
       }
     }
-  }
-  ctx.globalAlpha=1;
-  for(let i=0;i<seeds.length;i++){
-    let point=rasterizePoint(seeds[i].x,seeds[i].y,seeds[i].z);
-    if(point.d!=-1){
-      let size=200/(1+point.d);
-      ctx.fillRect(point.x-size/2,point.y-size/2,size,size);
+    for(let i=0;i<sparks.length;i++){
+      if(sparks[i].alpha>0 && sparks[i].radius>5){
+        sparks[i].alpha-=.01;
+        sparks[i].radius/=1.02;
+        sparks[i].vy+=gravity;
+        let point={x:sparks[i].x,y:sparks[i].y,z:sparks[i].z};
+        if(sparks[i].trail.length){
+          let x=sparks[i].trail.at(-1).x;
+          let y=sparks[i].trail.at(-1).y;
+          let z=sparks[i].trail.at(-1).z;
+          let d=((point.x-x)**2+(point.y-y)**2+(point.z-z)**2);
+          if(d>9){ sparks[i].trail.push(point); }
+        }else{ sparks[i].trail.push(point); }
+        if(sparks[i].trail.length>5) sparks[i].trail.shift();
+        sparks[i].x+=sparks[i].vx;
+        sparks[i].y+=sparks[i].vy;
+        sparks[i].z+=sparks[i].vz;
+        sparks[i].vx/=1.075;
+        sparks[i].vy/=1.075;
+        sparks[i].vz/=1.075;
+      }else{
+        sparks.splice(i,1);
+      }
     }
+    let p=Math.atan2(playerX,playerZ);
+    let d=Math.sqrt(playerX**2+playerZ**2);
+    d+=Math.sin(frames/80)/1.25;
+    let t=Math.sin(frames/200)/40;
+    playerX=Math.sin(p+t)*d;
+    playerZ=Math.cos(p+t)*d;
+    yaw=pi+p+t;
   }
-  let point1={};
-  for(let i=0;i<sparks.length;i++){
-    let point=rasterizePoint(sparks[i].x,sparks[i].y,sparks[i].z);
-    if(point.d!=-1){
-      let size=sparks[i].radius*200/(1+point.d);
-      if(sparks[i].alpha<0) sparks[i].alpha=0;
-      if(sparks[i].trail.length){
-        point1.x=point.x; point1.y=point.y;
-        ctx.strokeStyle="#fff";
-        for(let j=sparks[i].trail.length-1;j>=0;--j){
-          let point2=rasterizePoint(sparks[i].trail[j].x,sparks[i].trail[j].y,sparks[i].trail[j].z);
-          if(point2.d!=-1){
-            ctx.globalAlpha=j/sparks[i].trail.length*sparks[i].alpha/2;
-            ctx.beginPath();
-            ctx.moveTo(point1.x,point1.y);
-            ctx.lineWidth=1+sparks[i].radius*10/(sparks[i].trail.length-j)/(1+point2.d);
-            ctx.lineTo(point2.x,point2.y);
-            ctx.stroke();
-            point1.x=point2.x; point1.y=point2.y;
+
+  function draw(){
+    ctx.clearRect(0,0,cx*2,cy*2);
+    ctx.fillStyle="#ff8";
+    for(let i=-100;i<100;i+=3){
+      for(let j=-100;j<100;j+=4){
+        let x=i,z=j,y=25;
+        let point=rasterizePoint(x,y,z);
+        if(point.d!=-1){
+          let size=250/(1+point.d);
+          let d=Math.sqrt(x*x+z*z);
+          let a=0.75 - Math.pow(d/100,6)*0.75;
+          if(a>0){
+            ctx.globalAlpha=a;
+            ctx.fillRect(point.x-size/2,point.y-size/2,size,size);
           }
         }
       }
-      ctx.globalAlpha=sparks[i].alpha;
-      ctx.drawImage(sparks[i].img,point.x-size/2,point.y-size/2,size,size);
     }
-  }
-}
-
-function frame(){
-  if(frames>100000){ seedTimer=0; frames=0; }
-  frames++;
-  draw();
-  doLogic();
-  requestAnimationFrame(frame);
-}
-
-window.addEventListener("resize",()=>{
-  canvas.width=canvas.clientWidth;
-  canvas.height=canvas.clientHeight;
-  cx=canvas.width/2;
-  cy=canvas.height/2;
-});
-
-initVars();
-frame();
-</script>
-
-<script>
-/* =====================
-   Text Animation
-===================== */
-S = {};
-S.Point = function (args) {
-  this.x = args.x;
-  this.y = args.y;
-  this.tx = args.x;
-  this.ty = args.y;
-  this.r = 2.5;  
-
-  this.setTarget = function (p) { this.tx = p.x; this.ty = p.y; };
-  this.update = function () { this.x += (this.tx - this.x) * 0.1; this.y += (this.ty - this.y) * 0.1; };
-  this.render = function (ctx) {
-    ctx.beginPath();
-    ctx.arc(this.x, this.y, this.r, 0, Math.PI * 2, false);
-    ctx.fill();
-  };
-};
-
-S.ShapeBuilder = (function () {
-  var gap = 2;
-  var c = document.createElement("canvas"),
-      ctx = c.getContext("2d");
-
-  function resize() { c.width = window.innerWidth; c.height = window.innerHeight; }
-  resize();
-  window.addEventListener("resize", resize);
-
-  function process() {
-    var pixels = ctx.getImageData(0, 0, c.width, c.height).data;
-    var dots = [];
-    for (let y = 0; y < c.height; y += gap) {
-      for (let x = 0; x < c.width; x += gap) {
-        let idx = (y * c.width + x) * 4 + 3;
-        if (pixels[idx] > 128) dots.push(new S.Point({ x, y }));
+    ctx.globalAlpha=1;
+    for(let i=0;i<seeds.length;i++){
+      let point=rasterizePoint(seeds[i].x,seeds[i].y,seeds[i].z);
+      if(point.d!=-1){
+        let size=200/(1+point.d);
+        ctx.fillRect(point.x-size/2,point.y-size/2,size,size);
       }
     }
-    return dots;
-  }
-
-  function wrapText(text, maxWidth, lineHeight) {
-    let words = text.split(" "), lines = [], line = "";
-    words.forEach((word) => {
-      let testLine = line + word + " ";
-      let metrics = ctx.measureText(testLine);
-      if (metrics.width > maxWidth && line !== "") {
-        lines.push(line.trim()); line = word + " ";
-      } else { line = testLine; }
-    });
-    lines.push(line.trim());
-    return lines;
-  }
-
-  return {
-    paragraph: function (text) {
-      ctx.clearRect(0, 0, c.width, c.height);
-      let fixedSize = Math.min(c.width, c.height) * 0.1;
-      ctx.font = `bold ${fixedSize}px sans-serif`;
-      ctx.textAlign = "center";
-      ctx.textBaseline = "middle";
-      let maxWidth = c.width * 0.8, lineHeight = fixedSize * 1.2;
-      let lines = wrapText(text, maxWidth, lineHeight);
-      let startY = c.height / 2 - ((lines.length - 1) * lineHeight) / 2;
-      lines.forEach((line, i) => { ctx.fillText(line, c.width / 2, startY + i * lineHeight); });
-      return process();
-    }
-  };
-})();
-
-(function () {
-  var canvas = document.getElementById("textCanvas"),
-      ctx = canvas.getContext("2d"),
-      points = [];
-
-  function resize() { canvas.width = window.innerWidth; canvas.height = window.innerHeight; }
-  resize();
-  window.addEventListener("resize", resize);
-
-  function render() {
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-    ctx.fillStyle = "#FFFFF0"; 
-    points.forEach((p) => { p.update(); p.render(ctx); });
-    requestAnimationFrame(render);
-  }
-
-  function showText(str) {
-    let dots = S.ShapeBuilder.paragraph(str);
-    for (let i = 0; i < dots.length; i++) {
-      if (!points[i]) {
-        points[i] = new S.Point({ x: Math.random() * canvas.width, y: Math.random() * canvas.height });
+    let point1={};
+    for(let i=0;i<sparks.length;i++){
+      let point=rasterizePoint(sparks[i].x,sparks[i].y,sparks[i].z);
+      if(point.d!=-1){
+        let size=sparks[i].radius*200/(1+point.d);
+        if(sparks[i].alpha<0) sparks[i].alpha=0;
+        if(sparks[i].trail.length){
+          point1.x=point.x; point1.y=point.y;
+          ctx.strokeStyle="#fff";
+          for(let j=sparks[i].trail.length-1;j>=0;--j){
+            let point2=rasterizePoint(sparks[i].trail[j].x,sparks[i].trail[j].y,sparks[i].trail[j].z);
+            if(point2.d!=-1){
+              ctx.globalAlpha=j/sparks[i].trail.length*sparks[i].alpha/2;
+              ctx.beginPath();
+              ctx.moveTo(point1.x,point1.y);
+              ctx.lineWidth=1+sparks[i].radius*10/(sparks[i].trail.length-j)/(1+point2.d);
+              ctx.lineTo(point2.x,point2.y);
+              ctx.stroke();
+              point1.x=point2.x; point1.y=point2.y;
+            }
+          }
+        }
+        ctx.globalAlpha=sparks[i].alpha;
+        ctx.drawImage(sparks[i].img,point.x-size/2,point.y-size/2,size,size);
       }
-      points[i].setTarget(dots[i]);
     }
-    points.splice(dots.length);
   }
 
-  let messages = ["","Chúc mừng sinh nhật", "Kim Khánh Chi", "06/09","",];
-  let i = 0;
-  showText(messages[i]);
+  function frame(){
+    if(frames>100000){ seedTimer=0; frames=0; }
+    frames++;
+    draw();
+    doLogic();
+    requestAnimationFrame(frame);
+  }
 
-  let interval = setInterval(() => { 
-    i++;
-    if (i < messages.length) {
+  window.addEventListener("resize",()=>{
+    canvas.width=canvas.clientWidth;
+    canvas.height=canvas.clientHeight;
+    cx=canvas.width/2;
+    cy=canvas.height/2;
+  });
+
+  initVars();
+  frame();
+
+  /* =====================
+     Text Animation
+  ===================== */
+  S = {};
+  S.Point = function (args) {
+    this.x = args.x;
+    this.y = args.y;
+    this.tx = args.x;
+    this.ty = args.y;
+    this.r = 2.5;  
+
+    this.setTarget = function (p) { this.tx = p.x; this.ty = p.y; };
+    this.update = function () { this.x += (this.tx - this.x) * 0.1; this.y += (this.ty - this.y) * 0.1; };
+    this.render = function (ctx) {
+      ctx.beginPath();
+      ctx.arc(this.x, this.y, this.r, 0, Math.PI * 2, false);
+      ctx.fill();
+    };
+  };
+
+  S.ShapeBuilder = (function () {
+    var gap = 2;
+    var c = document.createElement("canvas"),
+        ctx = c.getContext("2d");
+
+    function resize() { c.width = window.innerWidth; c.height = window.innerHeight; }
+    resize();
+    window.addEventListener("resize", resize);
+
+    function process() {
+      var pixels = ctx.getImageData(0, 0, c.width, c.height).data;
+      var dots = [];
+      for (let y = 0; y < c.height; y += gap) {
+        for (let x = 0; x < c.width; x += gap) {
+          let idx = (y * c.width + x) * 4 + 3;
+          if (pixels[idx] > 128) dots.push(new S.Point({ x, y }));
+        }
+      }
+      return dots;
+    }
+
+    function wrapText(text, maxWidth, lineHeight) {
+      let words = text.split(" "), lines = [], line = "";
+      words.forEach((word) => {
+        let testLine = line + word + " ";
+        let metrics = ctx.measureText(testLine);
+        if (metrics.width > maxWidth && line !== "") {
+          lines.push(line.trim()); line = word + " ";
+        } else { line = testLine; }
+      });
+      lines.push(line.trim());
+      return lines;
+    }
+
+    return {
+      paragraph: function (text) {
+        ctx.clearRect(0, 0, c.width, c.height);
+        let fixedSize = Math.min(c.width, c.height) * 0.1;
+        ctx.font = `bold ${fixedSize}px sans-serif`;
+        ctx.textAlign = "center";
+        ctx.textBaseline = "middle";
+        let maxWidth = c.width * 0.8, lineHeight = fixedSize * 1.2;
+        let lines = wrapText(text, maxWidth, lineHeight);
+        let startY = c.height / 2 - ((lines.length - 1) * lineHeight) / 2;
+        lines.forEach((line, i) => { ctx.fillText(line, c.width / 2, startY + i * lineHeight); });
+        return process();
+      }
+    };
+  })();
+
+  (function () {
+    var canvas = document.getElementById("textCanvas"),
+        ctx = canvas.getContext("2d"),
+        points = [];
+
+    function resize() { canvas.width = window.innerWidth; canvas.height = window.innerHeight; }
+    resize();
+    window.addEventListener("resize", resize);
+
+    function render() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      ctx.fillStyle = "#FFFFF0"; 
+      points.forEach((p) => { p.update(); p.render(ctx); });
+      requestAnimationFrame(render);
+    }
+
+    function showText(str) {
+      let dots = S.ShapeBuilder.paragraph(str);
+      for (let i = 0; i < dots.length; i++) {
+        if (!points[i]) {
+          points[i] = new S.Point({ x: Math.random() * canvas.width, y: Math.random() * canvas.height });
+        }
+        points[i].setTarget(dots[i]);
+      }
+      points.splice(dots.length);
+    }
+
+    let messages = ["Chúc mừng sinh nhật", "Kim Khánh Chi", "06/09","Nhắm mắt lại và ước nha","","","Thổi nến nha!!!"];
+    let i = 0;
+
+    // Show text when the overlay is clicked
+    document.getElementById("overlay").addEventListener("click", function() {
+      this.style.display = "none"; // Hide overlay
+      document.getElementById("click-sound").play(); // Play the click sound
       showText(messages[i]);
-    } else {
-      clearInterval(interval);
-      startCakeAnimation();
-    }
-  }, 6000);
 
-  render();
-})();
-</script>
+      let interval = setInterval(() => { 
+        i++;
+        if (i < messages.length) {
+          showText(messages[i]);
+        } else {
+          clearInterval(interval);
+        }
+      }, 4500);
+    });
 
-<script>
-/* =====================
-   Cake Lottie + Mic
-===================== */
-let cakeAnim, blowAnim, micStream, detecting = true;
+    render();
+  })();
+
+
+     /* ===================== Cake Lottie + Mic ==================== */
+ let cakeAnim, blowAnim, micStream, detecting = true;
 
 function startCakeAnimation(){
   document.getElementById("lottie").style.display = "block";
@@ -457,7 +489,7 @@ function startMic(){
           rms += v*v;
         }
         rms = Math.sqrt(rms/data.length);
-        if(rms>0.2){ // ngưỡng thổi
+        if(rms>0.1){ // ngưỡng thổi
           switchToBlow();
         } else {
           requestAnimationFrame(detect);
@@ -467,6 +499,6 @@ function startMic(){
     })
     .catch(err=>console.error("Mic error", err));
 }
-</script>
+  </script>
 </body>
 </html>
