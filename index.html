@@ -25,17 +25,7 @@ canvas {
   display: none;
   background: rgba(0,0,0,0.8);
 }
-#message {
-  position: absolute;
-  bottom: 10%;
-  width: 100%;
-  text-align: center;
-  font-size: 28px;
-  font-weight: bold;
-  color: #fff;
-  text-shadow: 0 0 10px #000;
-  display: none;
-}
+#message { position: absolute; bottom: 10%; width: 100%; text-align: center; font-size: 28px; font-weight: bold; color: #fff; text-shadow: 0 0 10px #000; display: none; }
 
 /* New Overlay Styles */
 #overlay {
@@ -74,7 +64,7 @@ canvas {
   <!-- Lottie Cake -->
   <div id="lottie"></div>
   <!-- Message -->
-  <div id="message">Thổi tắt nến của người khác không làm em sáng hơn. Nhưng đây là nến của em nên mong em sẽ luôn toả sáng nhaa!\nMong lời ước của em sẽ sớm thành hiện thực.</div>
+  <div id="message">Thổi tắt nến của người khác không làm mình sáng hơn. Nhưng đây là những ngọn nến dành riêng cho em, mong em sẽ luôn toả sáng thật rực rỡ.<br>Chúc điều ước của em sớm thành hiện thực nha!</div>
 
   <!-- Overlay with Tap Image and Text -->
   <div id="overlay">
@@ -419,7 +409,7 @@ canvas {
       points.splice(dots.length);
     }
 
-    let messages = ["Chúc mừng sinh nhật", "Kim Khánh Chi", "06/09","Nhắm mắt lại và ước nha","","","Thổi nến nha!!!"];
+    let messages = ["Chúc mừng sinh nhật", "Kim Khánh Chi", "06/09","Nhắm mắt lại và ước nha","","","Thổi nến thôi!!!"];
     let i = 0;
 
     // Show text when the overlay is clicked
@@ -491,7 +481,7 @@ function startMic(){
           rms += v*v;
         }
         rms = Math.sqrt(rms/data.length);
-        if(rms>0.05){ // ngưỡng thổi
+        if(rms>0.085){ // ngưỡng thổi
           switchToBlow();
         } else {
           requestAnimationFrame(detect);
