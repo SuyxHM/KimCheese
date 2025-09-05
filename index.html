@@ -329,9 +329,8 @@ canvas {
     this.render = function (ctx) {
 ctx.beginPath();
   
-  // Danh sách màu giới hạn (cầu vồng cơ bản)
   const colors = [ "orange", "yellow"];
-       if (this.frameCount > 60) { // đổi màu mỗi 30 frame (~0.5 giây)
+       if (this.frameCount > 60) {
    const colors = [ "orange", "yellow"];
     this.frameCount = 0;
   }
@@ -421,7 +420,7 @@ ctx.beginPath();
       points.splice(dots.length);
     }
 
-    let messages = ["Chúc mừng sinh nhật", "Kim Khánh Chi", "06/09","Nhắm mắt lại và ước nha","","","Thổi nến thôi!!!"];
+    let messages = ["Woaaa","Hôm nay là...","Sinh nhật của xinh nhất đó","Chúc mừng sinh nhật em", "Kim Khánh Chi", "♥♥♥♥♥♥","Nhắm mắt lại và ước nha","","","Thổi nến thôi!!!"];
     let i = 0;
 
     // Show text when the overlay is clicked
@@ -456,7 +455,7 @@ function startCakeAnimation(){
     renderer: "svg",
     loop: true,
     autoplay: true,
-    path: "cake.json" // 🎂 bánh có nến
+    path: "cake.json" 
   });
   startMic();
 }
@@ -470,7 +469,7 @@ function switchToBlow(){
     renderer: "svg",
     loop: false,
     autoplay: true,
-    path: "cake_off.json" // 🎂 bánh tắt nến
+    path: "cake_off.json"
   });
   document.getElementById("message").style.display = "block";
 }
